@@ -1,0 +1,236 @@
+---
+title: "TM-Visuals"
+author: "Zoey"
+date: '2022-04-03'
+output: word_document
+---
+
+```{r setup, include=FALSE}
+library(tm)
+library(qdap)
+library(wordcloud)
+library(plotrix)
+```
+
+Term frequency plots with tm
+```{r}
+#Covert TDM to matrix
+coffee_m <- as.matrix(coffee_tdm)
+#Sum rows and sort by frequency
+term_frequency <-  rowSums(coffee_m)
+term_frequency <- sort(term_frequency, decreasing = TRUE)
+
+# Create a barplot
+barplot(term_frequency[1:10], #indexing the number of terms, one to ten 
+        col = "tan", # specify the color "tan"
+        las = 2) # label orientation 2 to make the axis labels vertical
+
+```
+
+# Term frequency plots with qdap:
+qdap provides the freq_terms function to get word frequency. 
+```{r}
+# Find term frequencies
+frequency <-  freq_terms(
+  tweets$text,
+  top = 10, # specifies the top x number of words you want in your plot
+  at.least =3, # tells the function a word should only appear if it occurs this number of times or more. 
+  stopwords = "Top200Words" #uses a predefined list of words to remove called Top200Words.
+)
+
+#Plot term frequencies
+plot(frequency)
+```
+
+```{r}
+# Create frequency
+frequency <- freq_terms(
+    tweets$text,
+    top = 10,
+    at.least =3,
+    stopwords("english") #This time use stopwords("english") to define stop words.
+)
+
+# Make a frequency bar chart
+plot(frequency)
+```
+
+# Intro to word clouds
+```{r}
+#Convert TDM to matrix
+chardonnay_tdm <-  TermDocumentMatrix(clean_chardonnay)
+chardonnay_m <-  as.matrix(chardonnay_tdm)
+
+#Sum rows and sort by frequency
+term_frequency <-  rowSums(chardonnay_m)
+word_freqs <-  data.frame(term = names(term_frequency),
+                          num=term_frequency)
+
+# Make word cloud
+wordcloud(word_freqs$term, word_freqs$num, 
+          max.words = 100, color = "red")
+```
+
+Another example
+```{r}
+# Print the first 10 entries in term_frequency
+term_frequency[1:10]
+
+# Vector of terms
+terms_vec <- names(term_frequency)
+
+# Create a word cloud for the values in word_freqs
+wordcloud(terms_vec, term_frequency, 
+          max.words = 50, color = "red")
+```
+
+# Stop wrods and word clouds
+```{r}
+# Review a "cleaned" tweet
+content(chardonnay_corp[[24]])
+
+# Add Chardonnay to stopwords
+stops <- c(stopwords(kind = 'en'), "chardonnay")
+
+# Review last 6 stopwords 
+tail(stops)
+
+# Apply to a corpus
+cleaned_chardonnay_corp <- tm_map(chardonnay_corp, removeWords, stops)
+
+# Review a "cleaned" tweet again
+content(cleaned_chardonnay_corp[[24]])
+```
+
+# Plot the better word cloud
+```{r}
+# Sort the chardonnay_words in descending order
+sorted_chardonnay_words <- sort(chardonnay_words, decreasing = TRUE)
+
+# Print the 6 most frequent chardonnay terms
+head(sorted_chardonnay_words)
+
+# Get a terms vector
+terms_vec <- names(chardonnay_words)
+
+# Create a wordcloud for the values in word_freqs
+wordcloud(terms_vec, chardonnay_words, 
+          max.words = 50, colors = "red")
+```
+
+# multiple colors of word cloud
+
+```{r}
+# Print the word cloud with the specified colors
+wordcloud(chardonnay_freqs$term, chardonnay_freqs$num,
+   max.words = 100,
+    colors = c("grey80", "darkgoldenrod1", "tomato"))
+
+```
+
+Another example
+```{r}
+# Select 5 colors 
+color_pal <- cividis(n = 5)
+
+# Examine the palette output
+color_pal 
+
+# Create a word cloud with the selected palette
+wordcloud(chardonnay_freqs$term, 
+chardonnay_freqs$num, 
+max.words = 100, colors = color_pal)
+```
+
+# Other word clouds and word networks
+```{r Commonality clouds}
+#Combine both corpora: all_tweets
+all_coffee <-  paste(coffee_tweets$text,
+                     collapse = "")
+all_chardonnay <- paste(chardonnay_tweets$text,
+                        collapse = "")
+#paste() together all the tweets in each corpus along with the parameter collapse = "". This collapses all tweets into a single vector. Then you can create a single vector containing the two collapsed documents.
+
+#concatenate them
+all_tweets <-  c(all_coffee, all_chardonnay)
+
+#Clean all tweets
+all_tweets <- VectorSource(all_tweets)
+all_corpus <-  VCorpus(all_tweets)
+all_clean <-  clean_corpus(all_corpurs)
+all_tdm <-  TermDocumentMatrix(all_clean)
+all_m <-  as.matrix(all_tdm)
+
+#Make commonality cloud
+commonality.cloud(all_m, colors = "Steelblue1", max.words = 100)
+```
+
+# Comparison Clouds
+```{r Comparison Clouds}
+#Combine both corpora: all_tweets
+all_coffee <-  paste(coffee_tweets$text,
+                     collapse = "")
+all_chardonnay <- paste(chardonnay_tweets$text,
+                        collapse = "")
+#concatenate them
+all_tweets <-  c(all_coffee, all_chardonnay)
+
+#Clean all tweets
+all_tweets <- VectorSource(all_tweets)
+all_corpus <-  VCorpus(all_tweets)
+all_clean <-  clean_corpus(all_corpurs)
+all_tdm <-  TermDocumentMatrix(all_clean)
+colnames(all_tdm) <-  c("coffee", "chardonnay") #specify the variables
+all_m <-  as.matrix(all_tdm)
+
+# Make comparison cloud
+comparison.cloud(all_m, colors = c("orange", "blue"), 
+                 max.words = 50)
+
+#The comparison-cloud function will identify the words that are dissimilar, Term1 and Term_N, to make the plot.
+```
+
+# Pyramid plots:
+Another way to visualize the conjunction of two corpora is with a polarized tag plot. 
+```{r}
+#Identify terms shared by both documents
+common_words <-  subset(
+  all_tdm_m,
+  all_tdm_m[, 1] > 0 & all_tdm_m[, 2] >0
+)
+
+#Find the most commonly shared words
+difference <-  abs(common_words[, 1] - common_words[, 2])
+common_words <-  cbind(common_words, difference)
+common_words <- common_words[order(common_words[, 3],
+                                   decreasing =TRUE), ]
+top25_df <-  data.frame(x = common_words[1:25, 1],
+                        y = common_words[1:25, 2],
+                        labels = rownames(common_words[1:25 ]))
+
+#Make pyramid plot
+pyramid.plot(top25_df$x, top25_df$y,
+              labels = top25_df$labels,
+              main = "Words in Common",
+              gap =8, laxly = NULL,
+              raxlab = NULL, unit = NULL,
+              top.labels = c("Chardonnay",
+                             "Words", 
+                             "Coffee"))
+
+```
+
+# Word networkds
+```{r}
+# Create word network
+
+word_associate(coffee_tweets$text,
+               match.string = c("barista"),
+               stopwrods = c(Top200Words, "coffee", "amp"),
+               network.plot =  TRUE,
+               cloud.colors =  c("gray85", "darkred"))
+
+# Add a title
+title(main =" Barista Coffee Tweet Associations")
+```
+
